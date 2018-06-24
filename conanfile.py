@@ -13,10 +13,15 @@ class BreakpadConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "fPIC": [True, False],
+        # Whether to include the breakpad static library (for processing)
         "include_breakpad": [True, False],
-        "include_breakpad_client": [True, False]
+        # Whether to include the breakpad client library (for generating minidump)
+        "include_breakpad_client": [True, False],
+        # Whether to compile http_upload into the breakpad client library
+        "include_client_http": [True, False],
     }
-    default_options = "fPIC=True", "include_breakpad=True", "include_breakpad_client=True"
+    # Default configuration is for client
+    default_options = "fPIC=True", "include_breakpad=False", "include_breakpad_client=True", "include_client_http=True"
     generators = "cmake"
 
     source_subfolder = "source_subfolder"
@@ -38,11 +43,22 @@ class BreakpadConan(ConanFile):
         package_folder = os.path.abspath(self.package_folder)
         tools.mkdir(self.build_subfolder)
         with tools.chdir(self.build_subfolder):
+            make_args = []
+            if self.options.include_client_http:
+                # Add http_upload object file to libbreakpad_client
+                vars = [
+                    'src_client_linux_libbreakpad_client_a_LIBADD',
+                    'EXTRA_src_client_linux_libbreakpad_client_a_DEPENDENCIES'
+                ]
+                extras = 'src/common/linux/http_upload.$(OBJEXT)'
+                for var in vars:
+                    make_args.append("{}={}".format(var, extras))
+
             autotools = AutoToolsBuildEnvironment(self)
             autotools.configure(
                     configure_dir=source_folder,
                     args=["--prefix={}".format(package_folder)])
-            autotools.make()
+            autotools.make(args=make_args)
             autotools.install()
 
     def package(self):
@@ -59,6 +75,9 @@ class BreakpadConan(ConanFile):
             libs.append("breakpad")
         if self.options.include_breakpad_client:
             libs.append("breakpad_client")
+        if self.options.include_client_http:
+            # HTTPUpload requires dlsym, dlopen, etc
+            libs.append("dl")
         self.cpp_info.libs = libs
         if not self.settings.os == "Windows":
             self.cpp_info.cppflags = ["-pthread"]

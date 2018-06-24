@@ -20,5 +20,8 @@ int main(int argc, char* argv[]) {
   google_breakpad::MinidumpDescriptor descriptor("/tmp");
   google_breakpad::ExceptionHandler eh(descriptor, NULL, dumpCallback, NULL, true, -1);
   crash();
+  // Should be able to use HTTPUpload::SendRequest
+  google_breakpad::HTTPUpload::SendRequest(
+        "", {}, {}, "", "", "", 0, 0, 0 );
   return 0;
 }
