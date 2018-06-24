@@ -3,6 +3,7 @@
 #endif
 
 #include "client/linux/handler/exception_handler.h"
+#include "common/linux/http_upload.h"
 
 static bool dumpCallback(const google_breakpad::MinidumpDescriptor& descriptor,
 void* context, bool succeeded) {
